@@ -4,7 +4,7 @@ import time
 import helper
 import socket
 import threading
-import queue as queue
+import queue as Queue
 
 #initialize output queue
 BUF_SIZE = 100
