@@ -47,7 +47,7 @@ class ReceivingThread(threading.Thread):
         recv_index=0
         while True:
             try:
-                processed_img = helper.receievePayload(self.socket)
+                processed_img = helper.receievePayloadPickled(self.socket)
                 # processed_img = helper.resizeImage(processed_img)
                 q.put(processed_img)
             except Exception as e:

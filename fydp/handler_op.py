@@ -37,7 +37,7 @@ def process(imgsrc):
         opWrapper.emplaceAndPop([datum])
 
         # Collect and return output
-        output = datum.cvOutputData
+        output = {'imageWithKeypoints': datum.cvOutputData, 'poseKeypoints': datum.poseKeypoints}
         return output
     except Exception as e:
         print(e)

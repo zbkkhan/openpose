@@ -55,9 +55,10 @@ class ProcessingThread(threading.Thread):
                         if not q.empty():
                             image_buffer = q.get()
                             # Magic
-                            image_with_keypoints = handler_op.process(image_buffer)
+                            image_data = handler_op.process(image_buffer)
                             # print("Sending payload")
-                            helper.sendPayload(conn2, image_with_keypoints)
+                            helper.sendPayloadPickled(conn2, image_data)
+                            # helper.sendImagePayload(conn2, image_data_serialized)
                             # print("Sent payload successfully")
                     except Exception as e:
                         print("Exception while processing")
