@@ -27,10 +27,12 @@ class SendingThread(threading.Thread):
         fps_time = 0
         while True:
             try:
+                time.sleep(0.1)
                 ret_val, image = cam.read()
+                resized = helper.resizeImage(image)
                 # image = cv2.resize(image, (0,0), fx=0.5, fy=0.5) 
                 recv_times.append(time.time())
-                helper.sendPayload(self.socket,image)
+                helper.sendPayload(self.socket,resized)
             except Exception as e:
                 print("unable to send payload")
                 print(e)

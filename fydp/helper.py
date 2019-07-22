@@ -83,6 +83,19 @@ def sendPayload(s,img):
     # print(res2)
 
 
+def resizeImage(image):
+    '''
+    :param image:
+    :return: resized image
+    '''
+    scale_percent = 30 # percent of original size
+    width = int(image.shape[1] * scale_percent / 100)
+    height = int(image.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    # resize image
+    resized = cv2.resize(image, dim, interpolation = cv2.INTER_AREA)
+    return resized
+
 def receievePayload(conn):
     '''
     returns binary data
