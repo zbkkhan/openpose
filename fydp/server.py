@@ -29,8 +29,7 @@ class ReceivingThread(threading.Thread):
                     if not q.full():
                         image_buffer = helper.receievePayload(conn1)
                         q.put(image_buffer)
-                    else:
-                        break
+
         return
 
 
