@@ -9,7 +9,6 @@ import queue as Queue
 #initialize output queue
 BUF_SIZE = 100
 q = Queue.Queue(BUF_SIZE)
-recv_times=[]
 
 # initialize input stream
 cam = cv2.VideoCapture(0)
@@ -23,15 +22,12 @@ class SendingThread(threading.Thread):
         self.socket = socket
 
     def run(self):
-        global recv_time
         fps_time = 0
         while True:
             try:
-                time.sleep(0.1)
+                time.sleep(0.05)
                 ret_val, image = cam.read()
-                resized = helper.resizeImage(image)
-                # image = cv2.resize(image, (0,0), fx=0.5, fy=0.5) 
-                recv_times.append(time.time())
+                resized = helper.resizeImage(image,30)
                 helper.sendPayload(self.socket,resized)
             except Exception as e:
                 print("unable to send payload")
@@ -48,22 +44,17 @@ class ReceivingThread(threading.Thread):
         self.socket = socket
 
     def run(self):
-        global recv_times
         recv_index=0
         while True:
             try:
                 processed_img = helper.receievePayload(self.socket)
-                t1 = (time.time() - recv_times[recv_index])
-                recv_index+=1
-                # print("Time to process: " + str(t1))
+                # processed_img = helper.resizeImage(processed_img)
                 q.put(processed_img)
             except Exception as e:
                 print(e)
                 break
 
 def processImage():
-    # read in image to be processed
-    # img = cv2.imread('images/squat1.jpg',cv2.IMREAD_COLOR)
     try:
         print("Trying to connect to server...")
         s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -81,19 +72,10 @@ def processImage():
         rthread = ReceivingThread(name="receiver",socket=s2)
         rthread.start()  
         
-        global recv_times
-        img_received=0
-        print("rendering processed images")
+        print("Rendering processed images....")
         while True:
             if not q.empty():
                 processed_img = q.get()
-                height, width, layer = processed_img.shape
-                # print((width,height))
-                t2 = (time.time() - recv_times[img_received])
-                img_received+=1
-                if img_received > 200:
-                    break
-                # print("Rendering duration: " + str(t2))
                 cv2.imshow('OPENPOSE estimation result', processed_img)
                 if cv2.waitKey(1) == 27:
                     break
