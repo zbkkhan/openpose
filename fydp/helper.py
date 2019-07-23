@@ -159,10 +159,8 @@ def receievePayloadPickled(conn):
             image_data contains keys 'imageWithKeypoints' and 'poseKeypoints'
             '''
             image_data['imageWithKeypoints'] = decodeBinaryData(image_data['imageWithKeypoints'])
-            # print("payload received:")
-            # print(image_buffer)
 
-            return image_data['imageWithKeypoints']
+            return image_data
         if curr_size > payload_size:
             print("ERROR PARSING DATA")
 
