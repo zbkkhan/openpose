@@ -1,7 +1,14 @@
 
 import numpy as np
 '''
-
+Corrector class to help determine the validity and satefy of poses during various exercises
+Deadlift:
+    Ideal if done with SIDE VIEW
+    key postures: 
+    - hips should be vertically between knees and head not too low or too high 
+      otherwise they create unfavorable leverages, can decrease amount of weight youre pulling
+    - bar should be directly under shoulder blade
+    - should try to keep bar close as possible to body throughout exercise 
 '''
 
 class _Corrector:
@@ -50,7 +57,6 @@ class SquatCorrector(_Corrector):
             return True, "Legs are Good"
 
 
-
     #Unused right now
     def cosine(self, a, b, c):
         ba = a - b
@@ -85,4 +91,54 @@ class SquatCorrector(_Corrector):
 
         print(correctionString)
         # print(currKeyPointMap)
+
+class DeadliftCorrector(_Corrector):
+
+    def __init__(self, baseValues):
+        _Corrector.__init__(self, self.mapValues(baseValues))
+        print(baseValues)
+
+    def filter(self, keyPoints):
+        # {24, "RHeel"}, {10, "RKnee"}, {9,  "RHip"},  {1,  "Neck"}, {2,  "RShoulder"}
+        return {self.bodyMap[24]: keyPoints[24],
+                self.bodyMap[10]: keyPoints[10],
+                self.bodyMap[9]: keyPoints[9],
+                self.bodyMap[1]: keyPoints[1],
+                self.bodyMap[2]: keyPoints[2]
+                }
+
+
+    def hipForm(self, keyPoints):
+        #Hips should always be above knees, higher y value means lower down in the frame
+        hipKneeDelta = keyPoints['RKnee'][1] - keyPoints['RHip'][1] 
+        
+        # print("hip knee delta")
+        # print(hipKneeDelta)
+        if hipKneeDelta < 20:
+            return False, "CAUTION!! HIPS are too low, please raise them to avoide bad posture"
+        else:
+            return True, "Hips dont lie babayyy"
+
+
+    def shoulderForm(self, keyPoints):
+        #Shoulder and wrist should always be horizontally close to each other
+        rShoulder = keyPoints['RShoulder']
+        rWrist = keyPoints['RWrist']
+
+        shoulderWristDelta = abs(rShoulder[0] - rWrist[0])
+        # print("Shoulder-wrist delta")
+        # print(shoulderWristDelta)
+        if(shoulderWristDelta > 30):
+            return False, "CAUTION!! SHOULDER not aligned with bar"
+        else:
+            return True, "Shoulder is Good"
+
+    def corrector(self, keyPoints):
+        currKeyPointMap = self.mapValues(keyPoints)
+
+        isHipFormGood , hipCorrectionString = self.hipForm(currKeyPointMap)
+        print(hipCorrectionString)
+
+        isShoulderFormGood , shoulderCorrectionString = self.shoulderForm(currKeyPointMap)
+        print(shoulderCorrectionString)
 

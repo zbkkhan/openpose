@@ -5,7 +5,7 @@ import helper
 import socket
 import threading
 import queue as Queue
-from corrector import SquatCorrector
+from corrector import SquatCorrector, DeadliftCorrector
 
 #initialize output queue
 BUF_SIZE = 100
@@ -69,6 +69,7 @@ class WaitKeyPressThread(threading.Thread):
             input("Press enter to set base values")
             print("Setting base values")
             setNewBaseValues = True
+            break
 
 
 def processImage():
@@ -81,7 +82,7 @@ def processImage():
         sthread = SendingThread(name="sender",socket=s1)
         sthread.start()
 
-        time.sleep(3)
+        time.sleep(1)
 
         print("Trying to connect to client...")
         s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -95,22 +96,32 @@ def processImage():
         waitKeyPressThread.start()
 
         squatCorrector = None
-        print("Rendering processed images....")
+        deadliftCorrector = None
+        initializedCorrector = False
         while True:
             if not q.empty():
                 image_data = q.get()
+                multi_person_keypoints = image_data['poseKeypoints']
+                if multi_person_keypoints.size < 2:
+                    #not enough keypoints detected
+                    continue
+                
+                keypoints = multi_person_keypoints[0]
                 if setNewBaseValues:
                     print("Successfully set new base values")
-                    squatCorrector = SquatCorrector(image_data['poseKeypoints'][0])
+                    # squatCorrector = SquatCorrector(keypoints)
+                    deadliftCorrector = DeadliftCorrector(keypoints)
                     setNewBaseValues = False
+                    initializedCorrector = True
 
-                if squatCorrector is not None:
-                    # Only openpose is able to detect decent amount of keypoints, run the corrector 
-                    if image_data['poseKeypoints'].size == 75:
-                        squatCorrector.corrector(image_data['poseKeypoints'][0])
+                # Only openpose is able to detect decent amount of keypoints, try to run the corrector 
+                if initializedCorrector:
+                    deadliftCorrector.corrector(keypoints)
+                    # squatCorrector.corrector(keypoints)
+                    
+
 
                 cv2.imshow('OPENPOSE estimation result', image_data['imageWithKeypoints'])
-
                 if cv2.waitKey(1) == 27:
                     break
         
