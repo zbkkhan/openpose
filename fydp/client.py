@@ -105,8 +105,10 @@ def processImage():
                     setNewBaseValues = False
 
                 if squatCorrector is not None:
-                    squatCorrector.corrector(image_data['poseKeypoints'][0])
-                # corrector.squatCorrector(image_data['poseKeypoints'][0])
+                    # Only openpose is able to detect decent amount of keypoints, run the corrector 
+                    if image_data['poseKeypoints'].size == 75:
+                        squatCorrector.corrector(image_data['poseKeypoints'][0])
+
                 cv2.imshow('OPENPOSE estimation result', image_data['imageWithKeypoints'])
 
                 if cv2.waitKey(1) == 27:

@@ -43,7 +43,8 @@ class SquatCorrector(_Corrector):
 
     def legForm(self, keyPoints):
         kneeHeelDelta = abs(keyPoints['RHeel'][0] - keyPoints['RKnee'][0])
-        if (kneeHeelDelta) < 5:
+        # DG - kneeHeelDelta limit of 10 works better for me
+        if (kneeHeelDelta) < 10:
             return False, "Caution: Legs are straight, Bend Knees Slightly"
         else:
             return True, "Legs are Good"
@@ -66,9 +67,8 @@ class SquatCorrector(_Corrector):
         rHip = keyPoints['RHip']
         rShoulder = keyPoints['RShoulder']
 
-        print("Right Ear: " + str(rEar))
-        print("Right Eye: " + str(rEye))
-
+        # print("Right Ear: " + str(rEar))
+        # print("Right Eye: " + str(rEye))
 
         earEyeDelta = abs(rEar[1] - rEye[1])
         if(earEyeDelta > 5):
