@@ -1,5 +1,5 @@
-
 import numpy as np
+from enum import Enum
 '''
 Corrector class to help determine the validity and satefy of poses during various exercises
 Deadlift:
@@ -11,6 +11,10 @@ Deadlift:
     - should try to keep bar close as possible to body throughout exercise 
 '''
 
+class Direction(Enum):
+    UP = 1
+    DOWN = 2
+
 class _Corrector:
     #set base values to deviate from for all the keypoints required for this exercise
     bodyMap = {0:  "Nose", 1:  "Neck" , 2:  "RShoulder", 3:  "RElbow", 4:  "RWrist", 5:  "LShoulder", 6:  "LElbow", 7:  "LWrist",
@@ -18,7 +22,7 @@ class _Corrector:
                18: "LEar", 19: "LBigToe", 20: "LSmallToe", 21: "LHeel", 22: "RBigToe", 23: "RSmallToe", 24: "RHeel", 25: "Background"}
 
     baseValues = {}
-
+    
     def __init__(self, baseValues):
         self.baseValues = baseValues
 
@@ -33,10 +37,29 @@ class _Corrector:
 
 
 class SquatCorrector(_Corrector):
+  
+    previousDirection = Direction.DOWN
+    # False error state means form is good, True error state means form is erroneous
+    errorState = {
+        "leg": False,
+        "knee": False,
+        "back": False,
+        "hip": False
+    } 
+    errorCodes = {
+        1 : "Caution: Legs are straight, Bend Knees Slightly",
+        2 : "Caution: Leaning too forward, please align knees with toes", 
+        3 : "Caution: Back is not straight, please look straight and align your back",
+        4 : "Caution: Squat did not have enough depth, please lower hips next rep"
+    }
+    # Set tracking all current errors to be displayed
+    messagesToDisplay = set()
+    previousMessagesToDisplay = set()
 
     def __init__(self, baseValues):
         _Corrector.__init__(self, self.mapValues(baseValues))
-        print(baseValues)
+        self.previousFrameKeyPoints = self.mapValues(baseValues)
+        # print(baseValues)
 
     def filter(self, keyPoints):
         # {24, "RHeel"}, {10, "RKnee"}, {9,  "RHip"},  {1,  "Neck"}, {2,  "RShoulder"}
@@ -49,13 +72,32 @@ class SquatCorrector(_Corrector):
 
 
     def legForm(self, keyPoints):
+        errorMessage = 1
         kneeHeelDelta = abs(keyPoints['RHeel'][0] - keyPoints['RKnee'][0])
         # DG - kneeHeelDelta limit of 10 works better for me
         if (kneeHeelDelta) < 10:
-            return False, "Caution: Legs are straight, Bend Knees Slightly"
+            if self.errorState["leg"] == False:
+                self.messagesToDisplay.add(errorMessage)
+            self.errorState["leg"] = True
+            return False
         else:
-            return True, "Legs are Good"
+            self.messagesToDisplay.discard(errorMessage)
+            self.errorState["leg"] = False
+            return True
 
+    # Not using this right not due to lack of utility
+    def kneeForm(self, keyPoints):
+        errorMessage = 2
+        toeKneeDelta = abs(keyPoints['RBigToe'][0] - keyPoints['RKnee'][0])
+        if toeKneeDelta > 15:
+            if self.errorState["knee"] == False:
+                self.messagesToDisplay.add(errorMessage)
+            self.errorState["knee"] = True
+            return False
+        else:
+            self.messagesToDisplay.discard(errorMessage)
+            self.errorState["knee"] = False
+            return True
 
     #Unused right now
     def cosine(self, a, b, c):
@@ -68,6 +110,7 @@ class SquatCorrector(_Corrector):
         return np.degrees(angle)
 
     def backForm(self, keyPoints):
+        errorMessage = 3
         rEar = keyPoints['REar']
         rEye = keyPoints['REye']
         rHip = keyPoints['RHip']
@@ -78,19 +121,83 @@ class SquatCorrector(_Corrector):
 
         earEyeDelta = abs(rEar[1] - rEye[1])
         if(earEyeDelta > 5):
-            return False, "Caution: back is not straight, look straight ahead to align your back"
+            # Only print out error when going from good to bad
+            if self.errorState["back"] == False:
+                self.messagesToDisplay.add(errorMessage)
+            self.errorState["back"] = True
+            return False
         else:
-            return True, "Back is Good"
+            self.messagesToDisplay.discard(errorMessage)
+            self.errorState["back"] = False
+            return True
+          
+    # Hip form
+    # Goal: Ensure that hips go below knees on every rep. Need to maintain state keeping track of
+    # whether the user is going up or down.
+    def hipForm(self, keyPoints):
+        errorMessage = 4
+        result = True
+        hipVerticalPosition = keyPoints['RHip'][1]
+        kneeVerticalPosition = keyPoints['RKnee'][1]
+      
+        # Detect change in direction
+        lastHipVerticalPosition = self.previousFrameKeyPoints['RHip'][1]
+        # If lower than last hip vertical position, means the direction is down
+        if hipVerticalPosition > (lastHipVerticalPosition + 5):
+            currentDirection = Direction.DOWN
+        else:
+            currentDirection = Direction.UP
+
+        # Check if direction changing from down to up
+        if self.previousDirection == Direction.DOWN and currentDirection == Direction.UP:
+            # Check if hip dipped below knees
+            if hipVerticalPosition + 10 >= kneeVerticalPosition:
+                self.messagesToDisplay.discard(errorMessage)
+                self.errorState["hip"] = False
+                result = True
+            else:
+                if self.errorState["hip"] == False:
+                    self.messagesToDisplay.add(errorMessage)
+                self.errorState["hip"] = True
+                result = False
+      
+        self.previousDirection = currentDirection
+        return result
 
     def corrector(self, keyPoints):
         currKeyPointMap = self.mapValues(keyPoints)
-        isLegFormGood , correctionString = self.legForm(currKeyPointMap)
 
-        print(correctionString)
-        isBackFormGood , correctionString = self.backForm(currKeyPointMap)
+        isLegFormGood = self.legForm(currKeyPointMap)
+        isBackFormGood = self.backForm(currKeyPointMap)
+        isHipFormGood = self.hipForm(currKeyPointMap)
+        # isKneeFormGood = self.kneeForm(currKeyPointMap)
+        # self.printErrors()
 
-        print(correctionString)
-        # print(currKeyPointMap)
+        # Update previous frame
+        self.previousFrameKeyPoints = currKeyPointMap
+        self.previousMessagesToDisplay = self.messagesToDisplay.copy()
+
+        # Return current form's errors
+        return self.getErrorsFromCodes()
+    
+    def getErrorsFromCodes(self):
+        errorTexts = ""
+        for error in self.messagesToDisplay:
+            errorTexts += self.errorCodes[error] 
+            errorTexts += " || "
+        return errorTexts
+
+    # Function to help debugging, only prints form errors if they differ from last frame
+    def printErrors(self):
+        if self.previousMessagesToDisplay != self.messagesToDisplay:
+            print("NEW ERROR MESSAGES---------")
+            for error in self.messagesToDisplay:
+                print(self.errorCodes[error], end = ' || ')
+        else:
+            pass
+        print("")
+        
+
 
 class DeadliftCorrector(_Corrector):
 
@@ -109,7 +216,7 @@ class DeadliftCorrector(_Corrector):
 
 
     def hipForm(self, keyPoints):
-        #Hips should always be above knees, higher y value means lower down in the frame
+        # Hips should always be above knees, higher y value means lower down in the frame
         hipKneeDelta = keyPoints['RKnee'][1] - keyPoints['RHip'][1] 
         
         # print("hip knee delta")

@@ -138,3 +138,6 @@ html/
 
 ######################### Validation Scripts & Testing #########################
 output*/
+
+######################### trAIner specific ##########################
+fydp/awscredentials.py
