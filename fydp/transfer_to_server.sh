@@ -1,0 +1,1 @@
+scp * $1@eceubuntu4.uwaterloo.ca:/private/fydp2/openpose_2/openpose/fydp3
