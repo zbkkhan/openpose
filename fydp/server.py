@@ -146,7 +146,7 @@ def serve():
         pthread.start()
 
         client = WebRTCVideoClient("ws://eceubuntu4.uwaterloo.ca:10800")
-        time.time()
+        start_time = time.time()
         client.startReceiveVideo(receiveVideo)
 
         pthread.join()
